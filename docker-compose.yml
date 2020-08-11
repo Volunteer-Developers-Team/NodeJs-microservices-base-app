@@ -1,0 +1,78 @@
+version: '3.7'
+services:
+  mongodb:
+    image: mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - nodeapp-network
+  
+  lb:
+    image: dockercloud/haproxy
+    links:
+      - api-gateway
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 8090:8090
+      - 443:443
+    restart: on-failure
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: microservices-rsakin/api-gateway:dev
+    restart: on-failure
+    environment:
+      - VIRTUAL_HOST=api-gateway.app.com
+    ports:
+      - 3000:3000
+    volumes:
+      - ./api-gateway:/app/src
+
+  customer-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: microservices-rsakin/customer-service:dev
+    restart: on-failure
+    ports:
+      - 3001:3001
+    volumes:
+      - ./customer-service:/app/src
+    networks:
+      - nodeapp-network
+    depends_on: 
+      - mongodb
+
+  delivery-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: microservices-rsakin/delivery-service:dev
+    restart: on-failure
+    volumes:
+      - ./delivery-service:/app/src
+
+  order-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: microservices-rsakin/order-service:dev
+    restart: on-failure
+    volumes:
+      - ./order-service:/app/src
+
+  restaurants-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: microservices-rsakin/restaurants-service:dev
+    restart: on-failure
+    volumes:
+      - ./restaurants-service:/app/src
+
+networks:
+  nodeapp-network:
+    driver: bridge
